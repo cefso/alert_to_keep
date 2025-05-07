@@ -7,16 +7,22 @@ def handler(event, context):
     logger = logging.getLogger()
     logger.info("receive event: %s", event)
 
+    # event为bytes转换为dict
     try:
         event_json = json.loads(event)
     except:
         return "The request did not come from an HTTP Trigger because the event is not a json string, event: {}".format(event)
     
+    # 判断是否有body
     if "body" not in event_json:
         return "The request did not come from an HTTP Trigger because the event does not include the 'body' field, event: {}".format(event)
+    
     req_body = event_json['body']
+
+    # 判断body是否为base64编码数据
     if 'isBase64Encoded' in event_json and event_json['isBase64Encoded']:
         req_body = base64.b64decode(event_json['body']).decode("utf-8")
+
 
     return {
         'statusCode': 200,
