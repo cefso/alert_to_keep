@@ -1,0 +1,35 @@
+# ------------------------------------
+#   官方手册: https://manual.serverless-devs.com/user-guide/aliyun/#fc3
+#   常见小贴士: https://manual.serverless-devs.com/user-guide/tips/
+#   有问题快来钉钉群问一下吧：33947367
+# ------------------------------------
+edition: 3.0.0
+name: hello-world-app
+access: "aliyun"
+
+vars: # 全局变量
+  region: "ap-southeast-1"
+
+resources:
+  hello_world:
+    component: fc3 
+    props:
+      region: ${vars.region} # 关于变量的使用方法，可以参考：https://docs.serverless-devs.com/serverless-devs/yaml#%E5%8F%98%E9%87%8F%E8%B5%8B%E5%80%BC
+      functionName: "alert_to_keep"
+      description: "hello world by serverless devs"
+      runtime: "python3.10"
+      code: ./code
+      handler: index.handler
+      memorySize: 128
+      timeout: 30
+      triggers:
+        - triggerName: httpTrigger # 触发器名称
+          triggerType: http # 触发器类型
+          description: "xxxx"
+          qualifier: LATEST # 触发服务的版本
+          triggerConfig:
+            authType: anonymous # 鉴权类型，可选值：anonymous、function
+            disableURLInternet: false # 是否禁用公网访问 URL
+            methods: # HTTP 触发器支持的访问方法，可选值：GET、POST、PUT、DELETE、HEAD
+              - GET
+              - POST
