@@ -20,6 +20,7 @@ resources:
       runtime: "python3.10"
       code: ./code
       handler: index.handler
+      logConfig: auto
       memorySize: 128
       timeout: 30
       triggers:
