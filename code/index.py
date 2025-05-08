@@ -3,26 +3,43 @@ import logging
 import json
 import base64
 
+logger = logging.getLogger()
+
+
 def handler(event, context):
-    logger = logging.getLogger()
-    logger.info("receive event: %s", event)
+    logger.info("接收到的 event: %s", event)
 
     # event为bytes转换为dict
     try:
         event_json = json.loads(event)
     except:
-        return "The request did not come from an HTTP Trigger because the event is not a json string, event: {}".format(event)
-    
+        return "The request did not come from an HTTP Trigger because the event is not a json string, event: {}".format(
+            event)
+
     # 判断是否有body
     if "body" not in event_json:
-        return "The request did not come from an HTTP Trigger because the event does not include the 'body' field, event: {}".format(event)
-    
-    req_body = event_json['body']
+        return "The request did not come from an HTTP Trigger because the event does not include the 'body' field, event: {}".format(
+            event)
+
+    result = process_event(event_json)
+
+    return result
+
+
+def process_event(event):
+    logger.info("开始事件处理...")
+
+    req_header = event['headers']
+    logger.info("接收到的 headers: %s", req_header)
+
+    req_body = event['body']
+    logger.info("接收到的 body: %s", req_body)
 
     # 判断body是否为base64编码数据
-    if 'isBase64Encoded' in event_json and event_json['isBase64Encoded']:
-        req_body = base64.b64decode(event_json['body']).decode("utf-8")
+    if 'isBase64Encoded' in event and event['isBase64Encoded']:
+        req_body = base64.b64decode(event['body']).decode("utf-8")
 
+    logger.info("完成事件处理...")
 
     return {
         'statusCode': 200,
