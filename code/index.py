@@ -7,7 +7,7 @@ logger = logging.getLogger()
 
 
 def handler(event, context):
-    logger.info("接收到的 event: %s", event)
+    logger.info("接收到的event: %s", event)
 
     # event为bytes转换为dict
     try:
@@ -30,10 +30,22 @@ def process_event(event):
     logger.info("开始事件处理...")
 
     req_header = event['headers']
-    logger.info("接收到的 headers: %s", req_header)
+    logger.info("接收到的headers: %s", req_header)
 
+    # 判断body是否为空
     req_body = event['body']
-    logger.info("接收到的 body: %s", req_body)
+    if not req_body:
+        logger.info("本次接收到的body为空")
+        return{
+            'statusCode': 200,
+            'headers': {'Content-Type': 'text/plain'},
+            'isBase64Encoded': False,
+            'body': {
+                'message':'body is empty'
+            }
+        }
+
+    logger.info("接收到的body: %s", req_body)
 
     # 判断body是否为base64编码数据
     if 'isBase64Encoded' in event and event['isBase64Encoded']:
