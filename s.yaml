@@ -23,6 +23,12 @@ resources:
       logConfig: auto
       memorySize: 128
       timeout: 30
+      environmentVariables:
+        PATH: /code/python/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/code:/code/bin:/opt:/opt/bin
+        PYTHONPATH: /code/python
+        PYTHONUSERBASE: /code/python
+        KEEPURL: ${env('keepUrl')}
+        KEEPAPIKEY: ${env('keepApiKey')}
       triggers:
         - triggerName: httpTrigger # 触发器名称
           triggerType: http # 触发器类型
