@@ -46,12 +46,12 @@ def process_event(event):
             }
         }
 
-    logger.info("接收到的body: %s", req_body)
-
     # 判断body是否为base64编码数据
     if 'isBase64Encoded' in event and event['isBase64Encoded']:
         logger.info("开始解码Base64内容")
         req_body = base64.b64decode(req_body).decode("utf-8")
+
+    logger.info("接收到的body: %s", req_body)
 
     logger.info("完成事件处理...")
 
