@@ -28,6 +28,7 @@ def handler(event, context):
 
 def process_event(event):
     logger.info("开始事件处理...")
+    print(dir(event))
 
     req_header = event['headers']
     logger.info("接收到的headers: %s", req_header)
@@ -36,12 +37,12 @@ def process_event(event):
     req_body = event['body']
     if not req_body:
         logger.info("本次接收到的body为空")
-        return{
+        return {
             'statusCode': 200,
             'headers': {'Content-Type': 'text/plain'},
             'isBase64Encoded': False,
             'body': {
-                'message':'body is empty'
+                'message': 'body is empty'
             }
         }
 
@@ -49,7 +50,7 @@ def process_event(event):
 
     # 判断body是否为base64编码数据
     if 'isBase64Encoded' in event and event['isBase64Encoded']:
-        req_body = base64.b64decode(event['body']).decode("utf-8")
+        req_body = base64.b64decode(req_body).decode("utf-8")
 
     logger.info("完成事件处理...")
 
