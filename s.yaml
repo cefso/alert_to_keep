@@ -17,7 +17,7 @@ resources:
       region: ${vars.region} # 关于变量的使用方法，可以参考：https://docs.serverless-devs.com/serverless-devs/yaml#%E5%8F%98%E9%87%8F%E8%B5%8B%E5%80%BC
       functionName: "alert_to_keep"
       description: "alert_to_keep by serverless devs"
-      runtime: "python3.10"
+      runtime: "python3.12"
       code: ./code
       handler: index.handler
       logConfig: auto
