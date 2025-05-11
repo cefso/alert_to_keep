@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-import os
 import base64
 import datetime
+import hashlib
 import json
 import logging
+import os
 from urllib.parse import parse_qs
 
-import requests
 import pytz
+import requests
 
 logger = logging.getLogger()
 
@@ -71,7 +72,7 @@ def process_event(event):
         'statusCode': 200,
         'headers': {'Content-Type': 'text/plain'},
         'isBase64Encoded': False,
-        'body': json.dumps(response)
+        'body': response
     }
 
 
@@ -81,12 +82,13 @@ def cover_to_keep(message):
     last_received = cms_timestamp_to_formatted_time(message['timestamp'][0])
     source = 'cms-' + message['userId'][0]
     desc = message['metricName'][0] + '大于' + message['curValue'][0]
+    fingerprint = calculate_hash(message['metricName'][0] + message['instanceName'][0] + message['metricProject'][0])
     msg = {
         "id": message['ruleId'][0],
         "name": message['alertName'][0],
         "status": status,
         "lastReceived": last_received,
-        "environment": message['metricProject'],
+        "environment": message['metricProject'][0],
         "duplicateReason": "null",
         "service": "backend",
         "source": [source],
@@ -105,7 +107,7 @@ def cover_to_keep(message):
             "metricProject": message['metricProject'][0],
         },
         "ticket_url": "https://www.keephq.dev?enrichedTicketId=456",
-        "fingerprint": message["signature"],
+        "fingerprint": fingerprint,
     }
     logger.info("转换后的数据为: %s", msg)
     return msg
@@ -138,10 +140,28 @@ def send_to_keep(message):
         "Accept": "application/json",
         "X-API-KEY": keep_api_key
     }
-    data = message
 
-    response = requests.post(keep_url, headers=headers, data=data)
+    response = requests.post(keep_url, headers=headers, json=message)
 
     logger.info("消息转发到keep成功")
 
-    return response
+    logger.info(response.json())
+
+    return response.json()
+
+
+def calculate_hash(text: str, algorithm: str = 'sha256') -> str:
+    """
+    计算字符串的哈希值
+    :param text: 原始字符串
+    :param algorithm: 哈希算法（支持: md5, sha1, sha224, sha256, sha384, sha512）
+    :return: 十六进制哈希值
+    """
+    # 创建哈希对象
+    hasher = hashlib.new(algorithm)
+
+    # 更新哈希值（必须将字符串编码为字节）
+    hasher.update(text.encode('utf-8'))
+
+    # 返回十六进制结果
+    return hasher.hexdigest()
