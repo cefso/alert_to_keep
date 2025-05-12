@@ -81,7 +81,7 @@ def cover_to_keep(message):
     logger.info("cms告警的状态为: %s", status)
     last_received = cms_timestamp_to_formatted_time(message['timestamp'][0])
     source = 'cms-' + message['userId'][0]
-    desc = message['instanceName'][0] + +message['metricName'][0] + '大于' + message['curValue'][0]
+    desc = message['instanceName'][0] + ',' + message['metricName'][0] + '大于' + message['curValue'][0]
     fingerprint = calculate_hash(message['metricName'][0] + message['instanceName'][0] + message['metricProject'][0])
     msg = {
         "id": message['ruleId'][0],
