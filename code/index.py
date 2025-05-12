@@ -81,7 +81,7 @@ def cover_to_keep(message):
     logger.info("cms告警的状态为: %s", status)
     last_received = cms_timestamp_to_formatted_time(message['timestamp'][0])
     source = 'cms-' + message['userId'][0]
-    desc = message['metricName'][0] + '大于' + message['curValue'][0]
+    desc = message['instanceName'][0] + +message['metricName'][0] + '大于' + message['curValue'][0]
     fingerprint = calculate_hash(message['metricName'][0] + message['instanceName'][0] + message['metricProject'][0])
     msg = {
         "id": message['ruleId'][0],
@@ -90,13 +90,13 @@ def cover_to_keep(message):
         "lastReceived": last_received,
         "environment": message['metricProject'][0],
         "duplicateReason": "null",
-        "service": "backend",
+        "service": message['metricProject'][0],
         "source": [source],
         "message": desc,
         "description": desc,
         "severity": message['preTriggerLevel'][0],
         "pushed": True,
-        "url": "https://www.keephq.dev?alertId=1234",
+        "url": "https://keephq.cefso.online",
         "labels": {
             "regionId": message['regionId'][0],
             "regionName": message['regionName'][0],
@@ -106,7 +106,7 @@ def cover_to_keep(message):
             "instanceName": message['instanceName'][0],
             "metricProject": message['metricProject'][0],
         },
-        "ticket_url": "https://www.keephq.dev?enrichedTicketId=456",
+        "ticket_url": "https://keephq.cefso.online",
         "fingerprint": fingerprint,
     }
     logger.info("转换后的数据为: %s", msg)
