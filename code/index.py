@@ -30,6 +30,7 @@ def handler(event, context):
 
     url_path = event_json.get('rawPath', "")
 
+    # 根据url path判断是那种类型告警
     match url_path:
         case "/alert/cms":
             logger.info("告警类型为cms")
@@ -43,7 +44,7 @@ def handler(event, context):
                 'statusCode': 200,
                 'headers': {'Content-Type': 'text/plain'},
                 'isBase64Encoded': False,
-                'body': {'error': '未知的告警类型'}
+                'body': {'message': '未知的告警类型'}
             }
 
 
@@ -71,15 +72,22 @@ def process_event_cms(event):
     if 'isBase64Encoded' in event and event['isBase64Encoded']:
         logger.info("开始解码Base64内容")
         req_body = base64.b64decode(req_body).decode("utf-8")
-
-    params = parse_qs(req_body)
+        params = parse_qs(req_body)
+    else:
+        params = req_body
 
     logger.info("接收到的body: %s", params)
 
-    params = cover_to_keep(params)
+    if 'eventTime' in params:
+        # 处理cms事件告警
+        params = cover_to_keep_cms_event(params)
+    else:
+        # 处理cms时序指标告警
+        params = cover_to_keep_cms(params)
 
     logger.info("完成事件处理...")
 
+    # 发送消息到keep
     response = send_to_keep(params)
 
     return {
@@ -90,7 +98,8 @@ def process_event_cms(event):
     }
 
 
-def cover_to_keep(message):
+# cms时序指标告警消息转换为keep
+def cover_to_keep_cms(message):
     status = 'firing' if message['alertState'][0] == 'ALERT' else 'resolved'
     logger.info("cms告警的状态为: %s", status)
     last_received = cms_timestamp_to_formatted_time(message['timestamp'][0])
@@ -126,7 +135,36 @@ def cover_to_keep(message):
     logger.info("转换后的数据为: %s", msg)
     return msg
 
+# cms事件告警消息转换为keep
+def cover_to_keep_cms_event(message):
+    source = 'cms-' + message['userId'][0]
+    desc = message['instanceName'] + ',' + message['name']
+    fingerprint = calculate_hash(message['name'] + message['product'])
+    msg = {
+        "id": message['ruleId'],
+        "name": message['name'],
+        "status": 'firing',
+        "lastReceived": message['eventTime'],
+        "environment": message['metricProject'][0],
+        "duplicateReason": "null",
+        "service": message['metricProject'][0],
+        "source": [source],
+        "message": desc,
+        "description": desc,
+        "severity": message['preTriggerLevel'][0],
+        "pushed": True,
+        "url": "https://keephq.cefso.online",
+        "labels": {
+            message['content']
+        },
+        "ticket_url": "https://keephq.cefso.online",
+        "fingerprint": fingerprint,
+    }
+    logger.info("转换后的数据为: %s", msg)
+    return msg
 
+
+# cms时间戳转换为keep格式
 def cms_timestamp_to_formatted_time(timestamp):
     # 时间戳（毫秒）
     timestamp_ms = int(timestamp)
@@ -145,6 +183,7 @@ def cms_timestamp_to_formatted_time(timestamp):
     return formatted_time
 
 
+# 发送消息到keep
 def send_to_keep(message):
     keep_url = os.environ.get('KEEPURL')
     keep_api_key = os.environ.get('KEEPAPIKEY')
@@ -164,7 +203,8 @@ def send_to_keep(message):
     return response.json()
 
 
-def calculate_hash(text: str, algorithm: str = 'sha256') -> str:
+# 计算告警指纹
+def calculate_hash(text: str, algorithm: str = 'sha256'):
     """
     计算字符串的哈希值
     :param text: 原始字符串
