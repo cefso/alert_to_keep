@@ -80,7 +80,7 @@ def process_event_cms(event):
 
     if 'eventTime' in params:
         # 处理cms事件告警
-        params = cover_to_keep_cms_event(params)
+        params = cover_to_keep_cms_event(json.loads(params))
     else:
         # 处理cms时序指标告警
         params = cover_to_keep_cms(params)
@@ -135,28 +135,27 @@ def cover_to_keep_cms(message):
     logger.info("转换后的数据为: %s", msg)
     return msg
 
+
 # cms事件告警消息转换为keep
 def cover_to_keep_cms_event(message):
-    source = 'cms-' + message['userId'][0]
+    source = 'cms-' + message['userId']
     desc = message['instanceName'] + ',' + message['name']
     fingerprint = calculate_hash(message['name'] + message['product'])
     msg = {
-        "id": message['ruleId'],
+        "id": message['id'],
         "name": message['name'],
         "status": 'firing',
         "lastReceived": message['eventTime'],
-        "environment": message['metricProject'][0],
+        "environment": message['product'],
         "duplicateReason": "null",
-        "service": message['metricProject'][0],
+        "service": message['product'],
         "source": [source],
         "message": desc,
         "description": desc,
-        "severity": message['preTriggerLevel'][0],
+        "severity": message['level'],
         "pushed": True,
         "url": "https://keephq.cefso.online",
-        "labels": {
-            message['content']
-        },
+        "labels": json.loads(message['content']),
         "ticket_url": "https://keephq.cefso.online",
         "fingerprint": fingerprint,
     }
