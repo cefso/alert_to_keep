@@ -28,12 +28,26 @@ def handler(event, context):
         return "The request did not come from an HTTP Trigger because the event does not include the 'body' field, event: {}".format(
             event)
 
-    result = process_event(event_json)
+    url_path = event_json.get('rawPath', "")
 
-    return result
+    match url_path:
+        case "/alert/cms":
+            logger.info("告警类型为cms")
+            return process_event_cms(event_json)
+        case "/alert/arms":
+            logger.info("告警类型为arms")
+            return process_event_cms(event_json)
+        case _:
+            logger.info("未知告警类型")
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'text/plain'},
+                'isBase64Encoded': False,
+                'body': {'error': '未知的告警类型'}
+            }
 
 
-def process_event(event):
+def process_event_cms(event):
     logger.info("开始事件处理...")
 
     req_header = event['headers']
