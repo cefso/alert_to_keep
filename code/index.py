@@ -37,7 +37,7 @@ def handler(event, context):
             return process_event_cms(event_json)
         case "/alert/arms":
             logger.info("告警类型为arms")
-            return process_event_cms(event_json)
+            return process_event_arms(event_json)
         case _:
             logger.info("未知告警类型")
             return {
@@ -49,7 +49,7 @@ def handler(event, context):
 
 
 def process_event_cms(event):
-    logger.info("开始事件处理...")
+    logger.info("开始cms事件处理...")
 
     req_header = event['headers']
     logger.info("接收到的headers: %s", req_header)
@@ -85,7 +85,7 @@ def process_event_cms(event):
         # 处理cms时序指标告警
         params = cover_to_keep_cms(params)
 
-    logger.info("完成事件处理...")
+    logger.info("完成cms事件处理...")
 
     # 发送消息到keep
     response = send_to_keep(params)
@@ -161,6 +161,61 @@ def cover_to_keep_cms_event(message):
     }
     logger.info("转换后的数据为: %s", msg)
     return msg
+
+
+def process_event_arms(event):
+    logger.info("开始arms事件处理...")
+
+    req_header = event['headers']
+    logger.info("接收到的headers: %s", req_header)
+
+    # 判断body是否为空
+    req_body = event['body']
+
+    if not req_body:
+        logger.info("本次接收到的body为空")
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'text/plain'},
+            'isBase64Encoded': False,
+            'body': {
+                'message': 'body is empty'
+            }
+        }
+
+    # 判断body是否为base64编码数据
+    if 'isBase64Encoded' in event and event['isBase64Encoded']:
+        logger.info("开始解码Base64内容")
+        req_body = base64.b64decode(req_body).decode("utf-8")
+        params = parse_qs(req_body)
+    else:
+        params = req_body
+
+    logger.info("接收到的body: %s", params)
+    print(type(params))
+
+    # if 'eventTime' in params:
+    #     # 处理cms事件告警
+    #     params = cover_to_keep_cms_event(json.loads(params))
+    # else:
+    #     # 处理cms时序指标告警
+    #     params = cover_to_keep_cms(params)
+    #
+    # logger.info("完成arms事件处理...")
+    #
+    # # 发送消息到keep
+    # response = send_to_keep(params)
+
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'text/plain'},
+        'isBase64Encoded': False,
+        'body': {'message': 'true'}
+    }
+
+
+def cover_to_keep_arms(message):
+    pass
 
 
 # cms时间戳转换为keep格式
