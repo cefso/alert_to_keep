@@ -80,7 +80,7 @@ def process_event_cms(event):
 
     if 'eventTime' in params:
         # 处理cms事件告警
-        params = cover_to_keep_cms_event(json.loads(params))
+        params = cover_to_keep_cms_event(params)
     else:
         # 处理cms时序指标告警
         params = cover_to_keep_cms(params)
@@ -169,6 +169,8 @@ def process_event_arms(event):
     req_header = event['headers']
     logger.info("接收到的headers: %s", req_header)
 
+    source = event['requestContext']["path"].split('/')[-1]
+
     # 判断body是否为空
     req_body = event['body']
 
@@ -192,30 +194,45 @@ def process_event_arms(event):
         params = req_body
 
     logger.info("接收到的body: %s", params)
-    print(type(params))
 
-    # if 'eventTime' in params:
-    #     # 处理cms事件告警
-    #     params = cover_to_keep_cms_event(json.loads(params))
-    # else:
-    #     # 处理cms时序指标告警
-    #     params = cover_to_keep_cms(params)
-    #
-    # logger.info("完成arms事件处理...")
-    #
-    # # 发送消息到keep
-    # response = send_to_keep(params)
+    params = cover_to_keep_arms(json.loads(params), source)
+
+    logger.info("完成arms事件处理...")
+
+    # 发送消息到keep
+    response = send_to_keep(params)
 
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'text/plain'},
         'isBase64Encoded': False,
-        'body': {'message': 'true'}
+        'body': {'message': response}
     }
 
 
-def cover_to_keep_arms(message):
-    pass
+def cover_to_keep_arms(message, alert_source):
+    # logger.info("arms告警的状态为: %s", status)
+    # last_received = cms_timestamp_to_formatted_time(message['timestamp'][0])
+    msg = {
+        "id": message['alarmId'],
+        "name": message['alerts'][0]['labels']['alertname'],
+        "status": message['alerts'][0]['status'],
+        "lastReceived": message['alerts'][0]['startTime'],
+        "environment": message['alerts'][0]['labels']['clustername'],
+        "duplicateReason": "null",
+        "service": "null",
+        "source": [alert_source],
+        "message": message['alerts'][0]['annotations']['message'],
+        "description": message['alerts'][0]['annotations']['message'],
+        "severity": message['level'],
+        "pushed": True,
+        "url": message['externalURL'],
+        "labels": message['alerts'][0]['labels'],
+        "ticket_url": message['externalURL'],
+        "fingerprint": message['alerts'][0]['fingerprint'],
+    }
+    logger.info("转换后的数据为: %s", msg)
+    return msg
 
 
 # cms时间戳转换为keep格式
