@@ -116,7 +116,7 @@ def cover_to_keep_cms(message):
         "id": message['ruleId'][0],
         "name": message['alertName'][0],
         "status": status,
-        "lastReceived": last_received,
+        "lastReceived": get_last_receive_time(),
         "environment": message['metricProject'][0],
         "duplicateReason": "null",
         "service": message['metricProject'][0],
@@ -151,7 +151,7 @@ def cover_to_keep_cms_event(message):
         "id": message['id'],
         "name": message['name'],
         "status": 'firing',
-        "lastReceived": message['eventTime'],
+        "lastReceived": get_last_receive_time(),
         "environment": message['product'],
         "duplicateReason": "null",
         "service": message['product'],
@@ -223,7 +223,7 @@ def cover_to_keep_arms(message, alert_source):
         "id": message['alarmId'],
         "name": message['alerts'][0]['labels']['alertname'],
         "status": message['alerts'][0]['status'],
-        "lastReceived": message['alerts'][0]['startTime'],
+        "lastReceived": get_last_receive_time(),
         "environment": message['alerts'][0]['labels']['clustername'],
         "duplicateReason": "null",
         "service": "null",
@@ -293,7 +293,7 @@ def cover_to_keep_sls(message, alert_source):
         "id": message['alert_id'],
         "name": message['alert_name'],
         "status": message['status'],
-        "lastReceived": cms_timestamp_to_formatted_time(message['alert_time']),
+        "lastReceived": get_last_receive_time(),
         "environment": message['project'],
         "duplicateReason": "null",
         "service": "null",
@@ -366,3 +366,14 @@ def calculate_hash(text: str, algorithm: str = 'sha256'):
 
     # 返回十六进制结果
     return hasher.hexdigest()
+
+
+def get_last_receive_time():
+    # 获取当前 UTC 时间（带时区信息）
+    dt = datetime.datetime.now(datetime.timezone.utc)
+
+    # 格式化时间字符串
+    formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S') + f'.{dt.microsecond // 1000:03d}Z'
+
+    return formatted_time
+    # 示例输出：2025-05-19T14:35:20.123Z
