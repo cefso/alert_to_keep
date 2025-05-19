@@ -30,14 +30,20 @@ def handler(event, context):
 
     url_path = event_json.get('rawPath', "")
 
+    alert_kind = url_path.split('/')[2]
+    logger.info("url中告警类型为: %s", alert_kind)
+
     # 根据url path判断是那种类型告警
-    match url_path:
-        case "/alert/cms":
+    match alert_kind:
+        case "cms":
             logger.info("告警类型为cms")
             return process_event_cms(event_json)
-        case "/alert/arms":
+        case "arms":
             logger.info("告警类型为arms")
             return process_event_arms(event_json)
+        case "sls":
+            logger.info("告警类型为sls")
+            return process_event_sls(event_json)
         case _:
             logger.info("未知告警类型")
             return {
@@ -169,7 +175,7 @@ def process_event_arms(event):
     req_header = event['headers']
     logger.info("接收到的headers: %s", req_header)
 
-    source = event['requestContext']["path"].split('/')[-1]
+    source = 'arms-' + event["requestContext"]["http"]["path"].split('/')[-1]
 
     # 判断body是否为空
     req_body = event['body']
@@ -235,23 +241,74 @@ def cover_to_keep_arms(message, alert_source):
     return msg
 
 
-# cms时间戳转换为keep格式
-def cms_timestamp_to_formatted_time(timestamp):
-    # 时间戳（毫秒）
-    timestamp_ms = int(timestamp)
+def process_event_sls(event):
+    logger.info("开始sls事件处理...")
 
-    # 转换为秒
-    timestamp_s = timestamp_ms / 1000
+    req_header = event['headers']
+    logger.info("接收到的headers: %s", req_header)
 
-    # 转换为 UTC 时间的 datetime 对象
-    dt = datetime.datetime.fromtimestamp(timestamp_s, tz=pytz.UTC)
+    source = 'sls-' + event["requestContext"]["http"]["path"].split('/')[-1]
 
-    # 格式化：年-月-日T时:分:秒.毫秒Z
-    formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S') + f'.{dt.microsecond // 1000:03d}Z'
+    # 判断body是否为空
+    req_body = event['body']
 
-    logger.info("cms告警的时间为: %s", formatted_time)
+    if not req_body:
+        logger.info("本次接收到的body为空")
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'text/plain'},
+            'isBase64Encoded': False,
+            'body': {
+                'message': 'body is empty'
+            }
+        }
 
-    return formatted_time
+    # 判断body是否为base64编码数据
+    if 'isBase64Encoded' in event and event['isBase64Encoded']:
+        logger.info("开始解码Base64内容")
+        req_body = base64.b64decode(req_body).decode("utf-8")
+        params = parse_qs(req_body)
+    else:
+        params = req_body
+
+    logger.info("接收到的body: %s", params)
+
+    params = cover_to_keep_sls(json.loads(params), source)
+
+    logger.info("完成sls事件处理...")
+
+    # 发送消息到keep
+    response = send_to_keep(params)
+
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'text/plain'},
+        'isBase64Encoded': False,
+        'body': {'message': response}
+    }
+
+
+def cover_to_keep_sls(message, alert_source):
+    msg = {
+        "id": message['alert_id'],
+        "name": message['alert_name'],
+        "status": message['status'],
+        "lastReceived": cms_timestamp_to_formatted_time(message['alert_time']),
+        "environment": message['project'],
+        "duplicateReason": "null",
+        "service": "null",
+        "source": [alert_source],
+        "message": message['condition'],
+        "description": message['condition'],
+        "severity": 'warning',
+        "pushed": True,
+        "url": message['alert_url'],
+        "labels": message['annotations'],
+        "ticket_url": message['query_url'],
+        "fingerprint": message['fingerprint'],
+    }
+    logger.info("转换后的数据为: %s", msg)
+    return msg
 
 
 # 发送消息到keep
@@ -272,6 +329,25 @@ def send_to_keep(message):
     logger.info(response.json())
 
     return response.json()
+
+
+# cms时间戳转换为keep格式
+def cms_timestamp_to_formatted_time(timestamp):
+    # 时间戳（毫秒）
+    timestamp_ms = int(timestamp)
+
+    # 转换为秒
+    timestamp_s = timestamp_ms / 1000
+
+    # 转换为 UTC 时间的 datetime 对象
+    dt = datetime.datetime.fromtimestamp(timestamp_s, tz=pytz.UTC)
+
+    # 格式化：年-月-日T时:分:秒.毫秒Z
+    formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S') + f'.{dt.microsecond // 1000:03d}Z'
+
+    logger.info("cms告警的时间为: %s", formatted_time)
+
+    return formatted_time
 
 
 # 计算告警指纹
